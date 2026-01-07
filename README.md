@@ -1,147 +1,265 @@
+# Competitive Programming Difficulty Predictor
 
-# CP Difficulty Predictor
+An end-to-end machine learning system that predicts the difficulty of competitive programming problems using natural language processing and ensemble learning techniques.
 
-**Predict competitive programming problem difficulty (Easy / Medium / Hard) and a numeric difficulty score (0–10) using machine learning.**
-
----
-
-## Project overview
-
-This repository implements a pipeline to predict the difficulty of competitive programming problems from their text (statement, input format and output format). It contains code for:
-
-* data preprocessing (`src/preprocess.py`)
-* feature extraction and meta-features (`src/features.py`)
-* training classification and regression models (`train_models.py`)
-* a Streamlit inference app (`predict_app.py`)
-* evaluation & plotting utilities (`src/eval_and_plot.py`)
-
-The models and preprocessing artifacts are saved to the `artifacts/` directory so the Streamlit app can load them for real-time inference.
+**System Outputs:**
+- **Difficulty Class:** Easy / Medium / Hard
+- **Numeric Difficulty Score:** 0–10
 
 ---
 
-## Repository structure
+## 📋 Table of Contents
+
+- [Project Overview](#-project-overview)
+- [Dataset](#-dataset)
+- [Methodology](#-methodology)
+- [Feature Engineering](#-feature-engineering)
+- [Models](#-models)
+- [Evaluation](#-evaluation)
+- [Project Structure](#-project-structure)
+- [Alternative Approach: SBERT + TF-IDF](#-alternative-approach-sbert--tf-idf)
+- [Installation](#%EF%B8%8F-installation)
+- [Usage](#%EF%B8%8F-usage)
+- [Web Application](#-web-application)
+- [Future Work](#-future-work)
+
+
+---
+
+## 🌟 Project Overview
+
+This project implements a machine learning system to automatically estimate the difficulty of competitive programming problems based on their problem statements. Instead of relying on manually assigned difficulty tags, the system learns patterns from textual descriptions, constraints, and algorithmic cues.
+
+**Key Features:**
+- TF-IDF based text representations
+- Domain-specific feature engineering
+- Supervised classification and regression models
+- Streamlit-based web application for real-time predictions
+
+---
+
+
+## 📊 Dataset
+
+- **Dataset File:** `problems_data_acm.jsonl`
+- **Format:** JSON Lines (JSONL)
+- **Domain:** ACM-style competitive programming problems
+
+### Data Fields
+
+Each problem entry contains:
+
+```json
+{
+  "description": "Main problem statement",
+  "input_description": "Input format and constraints",
+  "output_description": "Expected output format",
+  "problem_score": 6.5,
+  "problem_class": "Medium",
+  "url": "https://example.com/problem-link"
+}
+```
+
+| Field                | Description                            |
+|----------------------|----------------------------------------|
+| `description`        | Core problem statement                 |
+| `input_description`  | Input format and constraints           |
+| `output_description` | Output format                          |
+| `problem_score`      | Numeric difficulty score (0–10)        |
+| `problem_class`      | Difficulty label (Easy / Medium / Hard)|
+| `url`                | Original problem URL                   |
+
+> **Note:** `problem_class` is derived from `problem_score` using predefined thresholds during training.
+
+---
+
+## 🧠 Methodology
+
+The project follows a structured machine learning pipeline:
+
+1. Load and preprocess problem text
+2. Combine problem description, input, and output into a unified text field
+3. Extract textual and structural features
+4. Train classification and regression models
+5. Evaluate performance on a held-out test set
+6. Deploy trained models via a web interface
+
+---
+
+## 🧩 Feature Engineering
+
+### Text Features
+
+- **TF-IDF vectorization** using unigrams and bigrams
+- Maximum vocabulary size: 15,000
+- Dimensionality reduction using Truncated SVD (300 components)
+- Stopword removal
+
+### Meta Features
+
+Handcrafted features extracted from problem statements:
+
+- Text length and structure
+- Numeric constraints and estimated maximum input size
+- Presence of examples and sample I/O
+- Detection of Big-O notation
+- Code-like patterns
+- Algorithm-specific keywords
+
+**Keyword Groups:**
+- Graph algorithms
+- Dynamic programming
+- Advanced data structures
+- String algorithms
+- Mathematics
+- Geometry
+- Greedy techniques
+
+These features help capture problem complexity beyond raw text.
+
+---
+
+## 🤖 Models
+
+### Classification Model
+
+- **Algorithm:** Linear Support Vector Classifier (LinearSVC)
+- **Class Weighting:** Balanced
+- **Scaling:** StandardScaler
+- **Feature Selection:** VarianceThreshold
+
+### Regression Model
+
+- **Algorithm:** Stacking Regressor
+- **Base Models:** Ridge Regression, Histogram Gradient Boosting
+- **Final Estimator:** RidgeCV
+
+Both models use the same combined feature space.
+
+---
+
+## 📈 Evaluation
+
+### Classification Results (Test Set)
+
+**Overall Accuracy:** 57.23%
+
+| Class  | Precision | Recall | F1-Score |
+|--------|-----------|--------|----------|
+| Easy   | 0.63      | 0.59   | 0.61     |
+| Medium | 0.59      | 0.60   | 0.60     |
+| Hard   | 0.05      | 0.07   | 0.06     |
+
+> The model performs reliably for Easy and Medium problems but struggles with Hard problems due to class imbalance and label subjectivity.
+
+### Regression Results (Test Set)
+
+| Metric | Value |
+|--------|-------|
+| MAE    | 1.65  |
+| RMSE   | 1.99  |
+| R²     | 0.18  |
+
+Predicted difficulty scores are typically within ±1–2 points of the true score.
+
+---
+
+## 📁 Project Structure
 
 ```
-.
-├── README.md
-├── requirements.txt            # (recommended) Python deps
-├── problems_data_acm.jsonl     # training dataset (JSONL input expected)
-├── artifacts/                  # model + prediction outputs (generated)
+ACM_PROJECT_3/
+│
+├── artifacts/                     # Model files and evaluation outputs
 │   ├── classification_model.joblib
 │   ├── regression_model.joblib
 │   ├── test_predictions.csv
 │   ├── confusion_matrix.png
 │   └── regression_scatter.png
-├── train_models.py             # training pipeline (creates artifacts)
-├── predict_app.py              # Streamlit app (inference & UI)
-└── src/
-    ├── preprocess.py
-    ├── features.py
-    └── eval_and_plot.py
+│
+├── __pycache__/                   # Auto-generated cache files
+│
+├── eval_and_plot.py               # Evaluation and visualization
+├── features.py                    # Feature engineering
+├── preprocess.py                  # Data preprocessing
+├── train_models.py                # Model training pipeline
+├── predict_app.py                 # Streamlit web application
+│
+├── problems_data_acm.jsonl        # Dataset
+├── acm_doc.pdf                    # Project documentation
+├── requirements.txt               # Python dependencies
+└── README.md                      # Project documentation
 ```
 
 ---
 
-## Quickstart
+## 🔁 Alternative Approach: SBERT + TF-IDF
 
-1. Create a virtual environment and activate it (recommended):
+During development, I experimented with combining **SBERT (Sentence-BERT)** embeddings with TF-IDF features. My initial hypothesis was that deep semantic representations would improve difficulty prediction.
 
-```bash
-python -m venv .venv
-source .venv/bin/activate    # macOS / Linux
-.venv\Scripts\activate      # Windows (PowerShell: .venv\Scripts\Activate.ps1)
-```
+However, this approach led to lower classification accuracy (below 50%). After analysis, I found that competitive programming difficulty depends heavily on **rare algorithmic keywords** such as "segment tree," "bitmask," and "flow." TF-IDF assigns higher importance to such rare but informative terms, whereas SBERT smooths them into dense semantic representations.
 
-2. Install dependencies (example `requirements.txt` should include common packages):
+**Conclusion:** TF-IDF preserved sharp difficulty cues more effectively than SBERT. Based on empirical results, I chose **TF-IDF + meta-features** as the final approach.
+
+---
+
+## ⚙️ Installation
+
+### Requirements
+
+- Python 3.8 or higher
+- pip
+
+### Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Suggested packages (pin versions as needed): `numpy`, `pandas`, `scikit-learn`, `joblib`, `streamlit`, `matplotlib`, `seaborn`.
-
-3. Place your training data file `problems_data_acm.jsonl` in the project root. The `src/preprocess.py` helper already supports `.jsonl` and CSV.
-
 ---
 
-## Train models
+## ▶️ Usage
 
-To train both the classification (Easy/Medium/Hard) and regression (0–10 score) models and save artifacts:
+### Train Models
 
 ```bash
 python train_models.py
 ```
 
-What this does (high level):
+### Generate Evaluation Plots
 
-* loads `problems_data_acm.jsonl` (each line is a JSON problem object)
-* combines description / input / output into `combined_text`
-* extracts meta-features using `src/features.add_meta_features`
-* builds TF-IDF + SVD text pipeline and appends meta features
-* trains a LinearSVC classification model and a stacking regression ensemble
-* saves both artifacts (joblib) to `artifacts/`
-* writes `test_predictions.csv` for offline analysis
+```bash
+python eval_and_plot.py
+```
 
-### Common training issues
-
-* If `train_models.py` cannot find `problems_data_acm.jsonl`, place the file in the repository root or update the path in the script.
-* If you hit `ValueError: unconverted data remains when parsing...` while parsing dates, check your data fields and formats. The included pipeline does not rely on date parsing by default.
-* If you previously saw `AttributeError: module 'pandas' has no attribute 'read_jsonl'` — note that `pandas` has no built-in `read_jsonl` function in some versions; `src/preprocess.py` contains a `load_data()` helper that reads `.jsonl` safely.
-
----
-
-## Run the Streamlit app (inference)
-
-After training and artifact generation, launch the Streamlit app for real-time predictions:
+### Run Web Application
 
 ```bash
 streamlit run predict_app.py
 ```
 
-The app expects the artifacts to be present in the `artifacts/` directory:
+---
 
-* `classification_model.joblib`
-* `regression_model.joblib`
+## 🌐 Web Application
 
-If models are missing, the app will prompt you to train them first.
+The Streamlit interface allows users to:
+
+- Enter a problem statement
+- Add input and output formats
+- Predict difficulty class and score
+- View extracted features and algorithm hints
+- Test predictions using example problems
+
+The interface is designed to be simple and interpretable.
 
 ---
 
-## Evaluation & plots
+## 🔮 Future Work
 
-Use `src/eval_and_plot.py` to generate evaluation visuals from a CSV of holdout predictions. By default the script expects `artifacts/holdout_predictions.csv` and will produce:
-
-* `artifacts/confusion_matrix.png`
-* `artifacts/regression_scatter.png`
-
-You can also inspect `artifacts/test_predictions.csv` (created during training) for numeric analysis.
-
----
-
-## Features (what `src/features.py` extracts)
-
-The feature engine extracts a broad set of meta-features useful for problem difficulty prediction, including:
-
-* text length, lines, token counts, average word length
-* numeric counts (numbers, largest number), and derived logs
-* presence of big-O notation, code-like lines, sample I/O counts
-* counts of math/constraint phrases, punctuation and question marks
-* detection of dozens of CP-specific keywords (graphs, dp, segment tree, trie, kmp, geometry, greedy, etc.) and grouped keyword counts
-* derived features such as `estimated_max_n`, `num_keywords`, `type_token_ratio`
-
-These features are saved under `meta_cols` and used alongside TF-IDF/SVD text vectors for modeling.
+- Improve class balance using sampling techniques
+- Explore ordinal regression methods
+- Introduce transformer-based embeddings with task-specific fine-tuning
+- Add explainability tools such as SHAP or LIME
+- Extend support to other competitive programming platforms
 
 ---
-
-## Inference flow (what `predict_app.py` does)
-
-1. Build `combined_text` from the three text fields.
-2. Extract meta-features with `add_meta_features()`.
-3. Load saved artifacts (text pipeline, scaler, variance filter, model).
-4. Transform text and meta features into the model feature-space.
-5. Return a predicted difficulty class and a clipped numeric score (0–10).
-6. Streamlit UI displays detected features, metrics, and helpful hints.
-
----
-
 
